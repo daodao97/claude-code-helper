@@ -1,0 +1,87 @@
+{
+  "name": "claude-code-helper",
+  "displayName": "Claude Code Helper",
+  "description": "VSCode extension for Claude Code development with terminal management and command execution",
+  "version": "0.0.2",
+  "icon": "icon.jpeg",
+  "publisher": "daodao97",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/daodao97/claude-code-helper"
+  },
+  "keywords": [
+    "claude",
+    "ai",
+    "terminal",
+    "commands",
+    "productivity"
+  ],
+  "engines": {
+    "vscode": "^1.50.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "claude-code-helper.openCommandPanel",
+        "title": "Open Command Panel",
+        "category": "Claude Code Helper"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "claudeCodeHelperView",
+          "name": "Claude Code助手",
+          "when": "claudeCodeHelperEnabled"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "claudeCodeHelper",
+          "title": "Claude Code助手",
+          "icon": "$(terminal)"
+        }
+      ]
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "claude-code-helper.openCommandPanel",
+          "when": "true"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "build": "npm run compile && npm run package"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.50.0",
+    "@typescript-eslint/eslint-plugin": "^8.39.0",
+    "@typescript-eslint/parser": "^8.39.0",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.2.0",
+    "eslint": "^9.32.0",
+    "typescript": "^5.9.2"
+  }
+}
