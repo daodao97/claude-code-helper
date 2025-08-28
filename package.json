@@ -2,7 +2,7 @@
   "name": "claude-code-helper",
   "displayName": "Claude Code Helper",
   "description": "VSCode extension for Claude Code development with terminal management and command execution",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "icon": "icon.jpeg",
   "publisher": "daodao97",
   "repository": {
@@ -64,6 +64,11 @@
       {
         "command": "claude-code-helper.checkCLI",
         "title": "Check CLI Tool Status",
+        "category": "Claude Code Helper"
+      },
+      {
+        "command": "claude-code-helper.checkStatus",
+        "title": "Check Overall Status",
         "category": "Claude Code Helper"
       }
     ],

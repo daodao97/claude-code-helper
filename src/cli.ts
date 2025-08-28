@@ -53,7 +53,9 @@ class ClaudeCodeHelperCLI {
                     command = `open -R "${filePath}"`;
                     break;
                 case 'win32':
-                    command = `explorer /select,"${filePath.replace(/\//g, '\\')}"`;
+                    // Windows路径处理，避免路径中的特殊字符问题
+                    const windowsPath = filePath.replace(/\//g, '\\');
+                    command = `explorer /select,"${windowsPath}"`;
                     break;
                 default:
                     command = `xdg-open "${path.dirname(filePath)}"`;
@@ -381,8 +383,9 @@ class ClaudeCodeHelperCLI {
                     // Windows - 优先尝试播放自定义音频文件，回退到系统声音
                     const winAudioFile = audioFileMapping[soundConfig.toLowerCase()];
                     if (winAudioFile && fs.existsSync(winAudioFile)) {
-                        // 尝试使用 PowerShell 播放音频文件
-                        command = `powershell -c "(New-Object Media.SoundPlayer '${winAudioFile.replace(/'/g, "''")}').PlaySync();"`;
+                        // 使用PowerShell播放音频文件，确保UTF-8编码
+                        const escapedPath = winAudioFile.replace(/'/g, "''").replace(/"/g, '""');
+                        command = `powershell -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; (New-Object Media.SoundPlayer '${escapedPath}').PlaySync();"`;
                     } else {
                         // 回退到系统提示音
                         const winSounds: {[key: string]: string} = {
@@ -472,7 +475,13 @@ class ClaudeCodeHelperCLI {
                 }
                 break;
 
+            case 'version':
+            case '--version':
+                console.log('cchelper version 0.1.3');
+                break;
+
             case 'help':
+            case '--help':
             default:
                 this.showHelp();
                 break;

@@ -11,7 +11,6 @@ import { HttpServer } from './httpServer';
 
 export function activate(context: vscode.ExtensionContext) {
 	console.log('🚀 Claude Code Helper extension is now active!');
-	vscode.window.showInformationMessage('Claude Code Helper extension activated!');
 
 	const commandManager = new CommandManager(context);
 	const commandPanelProvider = new CommandPanelProvider(context.extensionUri, commandManager);
@@ -25,14 +24,8 @@ export function activate(context: vscode.ExtensionContext) {
 		console.error('HTTP 服务器启动失败:', error);
 	});
 
-	// 检查 Claude Code hooks 状态，但不自动安装
-	hookInstaller.checkHooksStatus().then((status) => {
-		if (!status.installed) {
-			console.log('ℹ️ Claude Code hooks 未安装，可通过插件面板进行配置');
-		} else {
-			console.log('✅ Claude Code hooks 已安装');
-		}
-	});
+	// 自动检测并显示系统状态
+	checkAndDisplaySystemStatus(hookInstaller);
 
 	const disposables = [
 		vscode.commands.registerCommand('claude-code-helper.openCommandPanel', () => {
@@ -65,6 +58,32 @@ export function activate(context: vscode.ExtensionContext) {
 		}),
 
 		vscode.commands.registerCommand('claude-code-helper.installHooks', async () => {
+			// 先检查CLI状态
+			const cliStatus = await hookInstaller.checkCLIStatus();
+			if (!cliStatus.available) {
+				vscode.window.showWarningMessage(
+					`无法安装 hooks：cchelper CLI 未安装\n${cliStatus.error || ''}`,
+					'安装 CLI'
+				).then(selection => {
+					if (selection === '安装 CLI') {
+						vscode.commands.executeCommand('claude-code-helper.installCLI');
+					}
+				});
+				return;
+			}
+
+			if (!cliStatus.commandsValid) {
+				vscode.window.showWarningMessage(
+					`CLI工具缺少hooks所需的命令：${cliStatus.missingCommands?.join(', ')}`,
+					'重新安装 CLI'
+				).then(selection => {
+					if (selection === '重新安装 CLI') {
+						vscode.commands.executeCommand('claude-code-helper.installCLI');
+					}
+				});
+				return;
+			}
+
 			const installed = await hookInstaller.installHooks();
 			if (installed) {
 				vscode.window.showInformationMessage('✅ Claude Code Helper hooks 已安装到 ~/.claude/settings.json');
@@ -89,30 +108,103 @@ export function activate(context: vscode.ExtensionContext) {
 		}),
 
 		vscode.commands.registerCommand('claude-code-helper.installCLI', async () => {
+			console.log('🔧 开始CLI安装过程...');
 			try {
 				await installCLI(context);
+				console.log('✅ CLI安装成功');
 				vscode.window.showInformationMessage('✅ cchelper CLI 已成功安装到系统PATH');
+				
+				// 通知WebView更新状态
+				CommandPanelProvider.notifyCLIInstallation(true, 'CLI安装成功');
+				
+				// 安装成功后重新检查状态
+				setTimeout(() => {
+					checkAndDisplaySystemStatus(hookInstaller);
+				}, 1000);
 			} catch (error) {
-				vscode.window.showErrorMessage(`CLI安装失败: ${error}`);
+				console.error('❌ CLI安装失败:', error);
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				vscode.window.showErrorMessage(`CLI安装失败: ${errorMessage}`);
+				// 通知WebView安装失败
+				CommandPanelProvider.notifyCLIInstallation(false, `安装失败: ${errorMessage}`);
 			}
 		}),
 
 		vscode.commands.registerCommand('claude-code-helper.checkCLI', async () => {
 			try {
-				const { exec } = require('child_process');
-				exec('cchelper help', (error: any) => {
-					if (error) {
-						vscode.window.showWarningMessage('cchelper CLI 未安装或不在PATH中\n点击"安装CLI"按钮进行安装', '安装CLI').then(selection => {
-							if (selection === '安装CLI') {
+				const cliStatus = await hookInstaller.checkCLIStatus();
+				
+				if (cliStatus.available) {
+					if (cliStatus.commandsValid) {
+						vscode.window.showInformationMessage(`✅ cchelper CLI 已正确安装\n版本: ${cliStatus.version || 'unknown'}\n所有hooks命令可用`);
+					} else {
+						vscode.window.showWarningMessage(
+							`⚠️ cchelper CLI 已安装但缺少某些命令\n版本: ${cliStatus.version || 'unknown'}\n缺少命令: ${cliStatus.missingCommands?.join(', ')}`,
+							'重新安装 CLI'
+						).then(selection => {
+							if (selection === '重新安装 CLI') {
 								vscode.commands.executeCommand('claude-code-helper.installCLI');
 							}
 						});
-					} else {
-						vscode.window.showInformationMessage('✅ cchelper CLI 已正确安装');
 					}
-				});
+				} else {
+					vscode.window.showWarningMessage(
+						`❌ cchelper CLI 未安装或不在PATH中\n错误: ${cliStatus.error || 'Unknown error'}`,
+						'安装 CLI'
+					).then(selection => {
+						if (selection === '安装 CLI') {
+							vscode.commands.executeCommand('claude-code-helper.installCLI');
+						}
+					});
+				}
 			} catch (error) {
 				vscode.window.showErrorMessage(`检查CLI状态失败: ${error}`);
+			}
+		}),
+
+		vscode.commands.registerCommand('claude-code-helper.checkStatus', async () => {
+			try {
+				const cliStatus = await hookInstaller.checkCLIStatus();
+				const hooksStatus = await hookInstaller.checkHooksStatus();
+				
+				let statusMessage = '📊 Claude Code Helper 状态报告\n\n';
+				
+				// CLI状态
+				statusMessage += '🔧 CLI工具状态:\n';
+				if (cliStatus.available) {
+					statusMessage += `✅ 已安装 (版本: ${cliStatus.version || 'unknown'})\n`;
+					if (cliStatus.commandsValid) {
+						statusMessage += '✅ 所有hooks命令可用\n';
+					} else {
+						statusMessage += `⚠️ 缺少命令: ${cliStatus.missingCommands?.join(', ')}\n`;
+					}
+				} else {
+					statusMessage += `❌ 未安装: ${cliStatus.error}\n`;
+				}
+				
+				// Hooks状态
+				statusMessage += '\n🎣 Hooks状态:\n';
+				if (hooksStatus.installed) {
+					statusMessage += `✅ 已安装到: ${hooksStatus.path}\n`;
+				} else {
+					statusMessage += '❌ 未安装\n';
+				}
+				
+				// 建议
+				statusMessage += '\n💡 建议:\n';
+				if (!cliStatus.available) {
+					statusMessage += '• 先安装CLI工具\n';
+				}
+				if (!cliStatus.commandsValid && cliStatus.available) {
+					statusMessage += '• 重新安装CLI工具以获取完整功能\n';
+				}
+				if (!hooksStatus.installed && cliStatus.available && cliStatus.commandsValid) {
+					statusMessage += '• 可以安装hooks以获得完整体验\n';
+				}
+				
+				vscode.window.showInformationMessage(statusMessage);
+			} catch (error) {
+				vscode.window.showErrorMessage(`检查状态失败: ${error}`);
 			}
 		}),
 
@@ -156,9 +248,9 @@ async function installCLI(context: vscode.ExtensionContext): Promise<void> {
 				fs.mkdirSync(binDir, { recursive: true });
 			}
 			
-			// 创建batch文件
-			const batContent = `@echo off\nnode "${cliPath}" %*`;
-			fs.writeFileSync(batFile, batContent);
+			// 创建batch文件，使用UTF-8编码避免中文乱码
+			const batContent = `@echo off\nchcp 65001 >nul 2>&1\nnode "${cliPath}" %*`;
+			fs.writeFileSync(batFile, batContent, { encoding: 'utf8' });
 			
 			// 添加到PATH（需要用户重启终端）
 			vscode.window.showInformationMessage(
@@ -247,6 +339,122 @@ node "${cliPath}" "$@"`;
 		
 	} catch (error) {
 		throw new Error(`安装过程中出错: ${error}`);
+	}
+}
+
+// 自动检测并显示系统状态
+async function checkAndDisplaySystemStatus(hookInstaller: HookInstaller): Promise<void> {
+	try {
+		console.log('🔍 正在检测系统状态...');
+		
+		// 同时检查CLI和hooks状态
+		const [cliStatus, hooksStatus] = await Promise.all([
+			hookInstaller.checkCLIStatus(),
+			hookInstaller.checkHooksStatus()
+		]);
+
+		// 构建状态消息
+		let statusMessage = '📊 Claude Code Helper 系统状态\n\n';
+		let hasIssues = false;
+
+		// CLI状态
+		statusMessage += '🔧 CLI工具: ';
+		if (cliStatus.available) {
+			if (cliStatus.commandsValid) {
+				statusMessage += `✅ 已安装 (v${cliStatus.version || 'unknown'})\n`;
+			} else {
+				statusMessage += `⚠️ 已安装但不完整 (缺少: ${cliStatus.missingCommands?.join(', ')})\n`;
+				hasIssues = true;
+			}
+		} else {
+			statusMessage += '❌ 未安装\n';
+			hasIssues = true;
+		}
+
+		// Hooks状态
+		statusMessage += '🎣 Hooks配置: ';
+		if (hooksStatus.installed) {
+			statusMessage += '✅ 已配置\n';
+		} else {
+			statusMessage += '❌ 未配置\n';
+			hasIssues = true;
+		}
+
+		// 根据状态显示相应的提示
+		if (!hasIssues) {
+			// 一切正常，显示成功消息
+			statusMessage += '\n🎉 系统配置完整，可以开始使用！';
+			console.log('✅ 系统状态检查完成：配置完整');
+			vscode.window.showInformationMessage('✅ Claude Code Helper 配置完整，已就绪！');
+		} else {
+			// 有问题，显示详细状态和解决建议
+			statusMessage += '\n💡 配置建议:\n';
+			
+			if (!cliStatus.available) {
+				statusMessage += '• 点击下方按钮安装CLI工具\n';
+			} else if (!cliStatus.commandsValid) {
+				statusMessage += '• 重新安装CLI工具以获取完整功能\n';
+			}
+			
+			if (!hooksStatus.installed && cliStatus.available && cliStatus.commandsValid) {
+				statusMessage += '• 安装hooks配置以获得完整体验\n';
+			} else if (!hooksStatus.installed && (!cliStatus.available || !cliStatus.commandsValid)) {
+				statusMessage += '• 先安装CLI工具，然后配置hooks\n';
+			}
+
+			console.log('⚠️ 系统状态检查完成：需要配置');
+			
+			// 显示状态和快速操作按钮
+			if (!cliStatus.available) {
+				vscode.window.showWarningMessage(
+					'Claude Code Helper 需要安装CLI工具才能正常工作',
+					'安装CLI工具',
+					'查看详细状态'
+				).then(selection => {
+					if (selection === '安装CLI工具') {
+						vscode.commands.executeCommand('claude-code-helper.installCLI');
+					} else if (selection === '查看详细状态') {
+						vscode.window.showInformationMessage(statusMessage);
+					}
+				});
+			} else if (!cliStatus.commandsValid) {
+				vscode.window.showWarningMessage(
+					'CLI工具不完整，某些功能可能无法使用',
+					'重新安装CLI',
+					'查看详细状态'
+				).then(selection => {
+					if (selection === '重新安装CLI') {
+						vscode.commands.executeCommand('claude-code-helper.installCLI');
+					} else if (selection === '查看详细状态') {
+						vscode.window.showInformationMessage(statusMessage);
+					}
+				});
+			} else if (!hooksStatus.installed) {
+				vscode.window.showInformationMessage(
+					'CLI工具已安装，是否配置hooks以获得完整体验？',
+					'安装Hooks',
+					'稍后配置'
+				).then(selection => {
+					if (selection === '安装Hooks') {
+						vscode.commands.executeCommand('claude-code-helper.installHooks');
+					}
+				});
+			}
+		}
+
+		// 记录详细状态到控制台
+		console.log('📋 详细状态报告:');
+		console.log(`   CLI可用: ${cliStatus.available}`);
+		console.log(`   CLI版本: ${cliStatus.version || 'N/A'}`);
+		console.log(`   命令完整: ${cliStatus.commandsValid}`);
+		console.log(`   Hooks配置: ${hooksStatus.installed}`);
+		if (cliStatus.missingCommands && cliStatus.missingCommands.length > 0) {
+			console.log(`   缺少命令: ${cliStatus.missingCommands.join(', ')}`);
+		}
+
+	} catch (error) {
+		console.error('❌ 状态检测失败:', error);
+		vscode.window.showErrorMessage('Claude Code Helper 状态检测失败，请检查插件安装');
 	}
 }
 

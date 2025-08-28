@@ -6,6 +6,7 @@ import { HookInstaller } from './hookInstaller';
 
 export class CommandPanelProvider implements vscode.WebviewViewProvider {
     private webviewView?: vscode.WebviewView;
+    private static instance?: CommandPanelProvider;
     
     private readonly hookInstaller: HookInstaller;
     
@@ -14,6 +15,25 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
         private readonly commandManager: CommandManager
     ) {
         this.hookInstaller = new HookInstaller();
+        CommandPanelProvider.instance = this;
+    }
+
+    public static notifyCLIInstallation(success: boolean, message?: string) {
+        console.log(`📢 通知WebView CLI安装结果: ${success ? '成功' : '失败'}, 消息: ${message}`);
+        if (CommandPanelProvider.instance?.webviewView) {
+            try {
+                CommandPanelProvider.instance.webviewView.webview.postMessage({
+                    type: 'cliInstalled',
+                    success: success,
+                    message: message
+                });
+                console.log('✅ WebView通知已发送');
+            } catch (error) {
+                console.error('❌ WebView通知发送失败:', error);
+            }
+        } else {
+            console.warn('⚠️ WebView实例不存在，无法发送通知');
+        }
     }
 
     private getAvailableAudioFiles(): Array<{name: string, value: string}> {
@@ -47,62 +67,6 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async handleAudioFileUpload(): Promise<void> {
-        // 使用 VSCode 的文件选择对话框
-        const fileUris = await vscode.window.showOpenDialog({
-            canSelectMany: true,
-            canSelectFolders: false,
-            canSelectFiles: true,
-            filters: {
-                '音频文件': ['wav', 'mp3', 'ogg', 'm4a'],
-                '所有文件': ['*']
-            },
-            openLabel: '选择音频文件'
-        });
-
-        if (!fileUris || fileUris.length === 0) {
-            throw new Error('未选择文件');
-        }
-
-        const soundsDir = path.join(this.extensionUri.fsPath, 'assets', 'sounds');
-        
-        // 确保音频目录存在
-        if (!fs.existsSync(soundsDir)) {
-            fs.mkdirSync(soundsDir, { recursive: true });
-        }
-
-        // 复制每个选中的文件到音频目录
-        for (const fileUri of fileUris) {
-            const sourceFilePath = fileUri.fsPath;
-            const fileName = path.basename(sourceFilePath);
-            const targetFilePath = path.join(soundsDir, fileName);
-
-            // 检查文件是否已存在
-            if (fs.existsSync(targetFilePath)) {
-                const overwrite = await vscode.window.showWarningMessage(
-                    `文件 "${fileName}" 已存在，是否覆盖？`,
-                    { modal: true },
-                    '覆盖',
-                    '跳过'
-                );
-                
-                if (overwrite !== '覆盖') {
-                    continue; // 跳过这个文件
-                }
-            }
-
-            try {
-                // 复制文件
-                fs.copyFileSync(sourceFilePath, targetFilePath);
-                console.log(`✅ 已复制音频文件: ${fileName}`);
-            } catch (error) {
-                console.error(`❌ 复制文件失败 ${fileName}:`, error);
-                throw new Error(`复制文件 "${fileName}" 失败: ${error}`);
-            }
-        }
-
-        vscode.window.showInformationMessage(`成功上传 ${fileUris.length} 个音频文件`);
-    }
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
@@ -243,34 +207,29 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                         });
                     }
                     break;
-                case 'uploadAudioFile':
-                    try {
-                        await this.handleAudioFileUpload();
-                        // 上传完成后重新加载音频文件列表
-                        const audioFiles = this.getAvailableAudioFiles();
-                        webview.postMessage({ 
-                            type: 'audioFilesLoaded', 
-                            audioFiles: audioFiles 
-                        });
-                        webview.postMessage({
-                            type: 'uploadResult',
-                            success: true,
-                            message: '音频文件上传成功'
-                        });
-                    } catch (error) {
-                        console.error('上传音频文件失败:', error);
-                        webview.postMessage({
-                            type: 'uploadResult',
-                            success: false,
-                            message: `上传失败: ${error}`
-                        });
-                    }
-                    break;
                 case 'checkCLI':
                     vscode.commands.executeCommand('claude-code-helper.checkCLI');
                     break;
                 case 'installCLI':
                     vscode.commands.executeCommand('claude-code-helper.installCLI');
+                    break;
+                case 'getCLIStatus':
+                    try {
+                        const cliStatus = await this.hookInstaller.checkCLIStatus();
+                        webview.postMessage({
+                            type: 'cliStatusChecked',
+                            available: cliStatus.available,
+                            version: cliStatus.version,
+                            commandsValid: cliStatus.commandsValid,
+                            missingCommands: cliStatus.missingCommands
+                        });
+                    } catch (error) {
+                        webview.postMessage({
+                            type: 'cliStatusChecked',
+                            available: false,
+                            error: error instanceof Error ? error.message : 'Unknown error'
+                        });
+                    }
                     break;
             }
         });
@@ -955,15 +914,13 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                         <h3 style="margin: 0; color: var(--vscode-foreground); font-size: 16px; font-weight: 600; letter-spacing: -0.2px;">
                             Hooks 管理
                         </h3>
-                        <div style="display: flex; gap: 8px;">
-                            <button onclick="checkCLIStatus()" style="background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-input-border); border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;" title="检查CLI工具状态">
-                                🔧 检查CLI
-                            </button>
-                            <button onclick="installCLI()" style="background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;" title="安装cchelper CLI工具到系统PATH">
-                                📥 安装CLI
-                            </button>
-                            <button onclick="uploadAudioFiles()" style="background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;" title="上传音频文件到 assets/sounds 目录">
-                                📁 上传音频
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div id="cliStatus" style="display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border);">
+                                <span id="cliStatusIcon" style="font-size: 12px;">⏳</span>
+                                <span id="cliStatusText" style="font-size: 12px; color: var(--vscode-foreground);">检查中</span>
+                            </div>
+                            <button id="cliActionBtn" onclick="handleCLIAction()" style="background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 12px; display: none;">
+                                安装CLI
                             </button>
                         </div>
                     </div>
@@ -1189,11 +1146,6 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                     });
                 }
                 
-                function uploadAudioFiles() {
-                    vscode.postMessage({
-                        type: 'uploadAudioFile'
-                    });
-                }
 
                 function checkCLIStatus() {
                     vscode.postMessage({
@@ -1202,9 +1154,162 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                 }
 
                 function installCLI() {
+                    console.log('📤 发送CLI安装请求到扩展');
                     vscode.postMessage({
                         type: 'installCLI'
                     });
+                    
+                    // 添加fallback超时检查，如果长时间没有响应就主动检查状态
+                    setTimeout(() => {
+                        console.log('🔍 Fallback: 主动检查CLI状态');
+                        getCLIStatus();
+                    }, 15000); // 15秒后fallback检查
+                }
+
+                function getCLIStatus() {
+                    console.log('📤 请求CLI状态检查');
+                    vscode.postMessage({
+                        type: 'getCLIStatus'
+                    });
+                }
+
+                // 调试函数：重置UI状态
+                function resetCLIState() {
+                    console.log('🔄 重置CLI UI状态');
+                    const iconElement = document.getElementById('cliStatusIcon');
+                    const textElement = document.getElementById('cliStatusText');
+                    const actionBtn = document.getElementById('cliActionBtn');
+                    
+                    if (iconElement && textElement && actionBtn) {
+                        iconElement.textContent = '❓';
+                        textElement.textContent = 'CLI状态未知';
+                        actionBtn.disabled = false;
+                        actionBtn.textContent = '检查CLI';
+                        actionBtn.style.display = 'inline-block';
+                        actionBtn.onclick = () => getCLIStatus();
+                    }
+                    
+                    // 清除所有超时
+                    if (window.cliInstallTimeout) {
+                        clearTimeout(window.cliInstallTimeout);
+                        window.cliInstallTimeout = null;
+                    }
+                }
+
+                // 暴露到全局，方便调试
+                window.resetCLIState = resetCLIState;
+
+                function updateCLIStatus(available, commandsValid, version) {
+                    const iconElement = document.getElementById('cliStatusIcon');
+                    const textElement = document.getElementById('cliStatusText');
+                    const actionBtn = document.getElementById('cliActionBtn');
+                    
+                    if (iconElement && textElement && actionBtn) {
+                        // 重新启用按钮
+                        actionBtn.disabled = false;
+                        
+                        if (available) {
+                            // CLI已安装，立即停止轮询
+                            if (window.cliPollingInterval) {
+                                console.log('✅ CLI已安装，停止轮询');
+                                clearInterval(window.cliPollingInterval);
+                                window.cliPollingInterval = null;
+                            }
+                            // 清除安装超时
+                            if (window.cliInstallTimeout) {
+                                clearTimeout(window.cliInstallTimeout);
+                                window.cliInstallTimeout = null;
+                            }
+                            
+                            if (commandsValid) {
+                                iconElement.textContent = '✅';
+                                textElement.textContent = 'CLI已安装';
+                                actionBtn.style.display = 'none';
+                                showStatus('✅ CLI安装完成', 'success');
+                            } else {
+                                iconElement.textContent = '⚠️';
+                                textElement.textContent = 'CLI不完整';
+                                actionBtn.textContent = '重装CLI';
+                                actionBtn.style.display = 'inline-block';
+                                showStatus('⚠️ CLI不完整，需要重装', 'warning');
+                            }
+                        } else {
+                            // CLI未安装，继续轮询（如果正在轮询的话）
+                            iconElement.textContent = '❌';
+                            textElement.textContent = 'CLI未安装';
+                            actionBtn.textContent = '安装CLI';
+                            actionBtn.style.display = 'inline-block';
+                        }
+                    }
+                    
+                    // 清除旧的超时（如果有）
+                    if (window.cliInstallTimeout) {
+                        clearTimeout(window.cliInstallTimeout);
+                        window.cliInstallTimeout = null;
+                    }
+                }
+
+                function handleCLIAction() {
+                    // 防止重复点击
+                    if (window.cliPollingInterval) {
+                        console.log('⚠️ CLI安装正在进行中，忽略重复请求');
+                        return;
+                    }
+                    
+                    // 显示安装中状态
+                    const iconElement = document.getElementById('cliStatusIcon');
+                    const textElement = document.getElementById('cliStatusText');
+                    const actionBtn = document.getElementById('cliActionBtn');
+                    
+                    if (iconElement && textElement && actionBtn) {
+                        iconElement.textContent = '⏳';
+                        textElement.textContent = 'CLI安装中';
+                        actionBtn.disabled = true;
+                        actionBtn.textContent = '安装中...';
+                    }
+                    
+                    // 清除之前的轮询和超时
+                    if (window.cliPollingInterval) {
+                        clearInterval(window.cliPollingInterval);
+                        window.cliPollingInterval = null;
+                    }
+                    if (window.cliInstallTimeout) {
+                        clearTimeout(window.cliInstallTimeout);
+                        window.cliInstallTimeout = null;
+                    }
+                    
+                    console.log('🔄 开始每秒轮询CLI状态');
+                    // 每秒检测CLI状态
+                    let pollCount = 0;
+                    const maxPolls = 30; // 最多轮询30次 (30秒)
+                    
+                    const pollingInterval = setInterval(() => {
+                        pollCount++;
+                        console.log(\`📊 CLI状态轮询 \${pollCount}/\${maxPolls}\`);
+                        getCLIStatus();
+                        
+                        // 30秒后停止轮询并超时处理
+                        if (pollCount >= maxPolls) {
+                            clearInterval(pollingInterval);
+                            window.cliPollingInterval = null;
+                            
+                            console.log('⏰ CLI安装超时，停止轮询');
+                            if (iconElement && textElement && actionBtn) {
+                                iconElement.textContent = '❌';
+                                textElement.textContent = 'CLI安装超时';
+                                actionBtn.disabled = false;
+                                actionBtn.textContent = '重试安装';
+                                actionBtn.style.display = 'inline-block';
+                            }
+                            showStatus('⚠️ CLI安装超时，请重试', 'error');
+                        }
+                    }, 1000); // 每1秒轮询
+                    
+                    // 存储轮询ID以便后续清除
+                    window.cliPollingInterval = pollingInterval;
+                    
+                    // 立即开始安装
+                    installCLI();
                 }
                 
                 function checkClaudeInstallation() {
@@ -1397,6 +1502,7 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                 }
 
 
+
                 
                 function playCustomAudioFile(soundType) {
                     // 播放自定义音频文件
@@ -1539,6 +1645,42 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                             hooksState[message.hookType] = message.installed;
                             updateHookDisplay(message.hookType);
                             break;
+                                case 'cliStatusChecked':
+                            // 更新CLI状态显示
+                            updateCLIStatus(message.available, message.commandsValid, message.version);
+                            break;
+                        case 'cliInstalled':
+                            // 清除安装超时
+                            if (window.cliInstallTimeout) {
+                                clearTimeout(window.cliInstallTimeout);
+                                window.cliInstallTimeout = null;
+                            }
+                            
+                            // CLI安装成功后自动检查状态
+                            if (message.success) {
+                                showStatus('✅ CLI安装成功', 'success');
+                                // 延迟一下再检查状态，确保安装完成
+                                setTimeout(() => {
+                                    getCLIStatus();
+                                }, 1000);
+                            } else {
+                                showStatus(\`❌ CLI安装失败: \${message.message || '未知错误'}\`, 'error');
+                                // 安装失败时重新启用按钮
+                                const actionBtn = document.getElementById('cliActionBtn');
+                                if (actionBtn) {
+                                    actionBtn.disabled = false;
+                                    actionBtn.textContent = '重试安装';
+                                    actionBtn.style.display = 'inline-block';
+                                }
+                                // 更新状态显示
+                                const iconElement = document.getElementById('cliStatusIcon');
+                                const textElement = document.getElementById('cliStatusText');
+                                if (iconElement && textElement) {
+                                    iconElement.textContent = '❌';
+                                    textElement.textContent = 'CLI安装失败';
+                                }
+                            }
+                            break;
                         case 'mp3Ready':
                             // 播放MP3文件
                             if (message.audioUri) {
@@ -1597,6 +1739,9 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                 
                 // 初始化hooks状态
                 initializeHooksStatus();
+                
+                // 初始化CLI状态检查
+                getCLIStatus();
                 
                 // 初始化环境变量折叠状态（默认折叠）
                 const content = document.getElementById('envVarsContent');

@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import * as vscode from 'vscode';
+import { CLIChecker } from './cliChecker';
 
 interface HookConfig {
     matcher: string;
@@ -23,6 +24,19 @@ interface ClaudeSettings {
 }
 
 export class HookInstaller {
+    private isWindows(): boolean {
+        return process.platform === 'win32';
+    }
+
+    private generateCrossPlatformCommand(errorVar: string, toolVar: string): string {
+        if (this.isWindows()) {
+            // Windows batch/PowerShell compatible command
+            return `powershell -Command "if ($env:TOOL_ERROR) { cchelper play '$env:TOOL_NAME' error } else { cchelper play '$env:TOOL_NAME' success }"`;
+        } else {
+            // Unix/Linux bash command
+            return `if [ -n "${errorVar}" ]; then cchelper play "${toolVar}" error; else cchelper play "${toolVar}" success; fi`;
+        }
+    }
     private readonly claudeSettingsPath: string;
 
     constructor() {
@@ -30,6 +44,30 @@ export class HookInstaller {
     }
 
     public async installHooks(hooksConfig?: any): Promise<boolean> {
+        // 首先检查CLI是否可用
+        const cliStatus = await CLIChecker.getCLIStatus();
+        if (!cliStatus.available) {
+            const message = `无法安装 hooks：cchelper CLI 未安装或不可用\n错误：${cliStatus.error}\n\n请先安装 CLI 工具后再尝试安装 hooks。`;
+            vscode.window.showErrorMessage(message, '安装 CLI').then(selection => {
+                if (selection === '安装 CLI') {
+                    vscode.commands.executeCommand('claude-code-helper.installCLI');
+                }
+            });
+            return false;
+        }
+
+        // 验证hooks需要的CLI命令
+        const commandValidation = await CLIChecker.validateHookCommands();
+        if (!commandValidation.valid) {
+            const message = `CLI工具缺少hooks所需的命令：${commandValidation.missingCommands.join(', ')}\n\n请重新安装或升级 CLI 工具。`;
+            vscode.window.showErrorMessage(message, '重新安装 CLI').then(selection => {
+                if (selection === '重新安装 CLI') {
+                    vscode.commands.executeCommand('claude-code-helper.installCLI');
+                }
+            });
+            return false;
+        }
+
         try {
             // 确保 .claude 目录存在
             const claudeDir = path.dirname(this.claudeSettingsPath);
@@ -86,12 +124,16 @@ export class HookInstaller {
             if (config.toolSounds) {
                 // 4. 工具声音提醒 - PreToolUse 和 PostToolUse 事件
                 // PreToolUse - 工具开始执行时
+                const startCommand = this.isWindows() 
+                    ? 'cchelper play "%TOOL_NAME%" start'
+                    : 'cchelper play "$TOOL_NAME" start';
+                    
                 settings.hooks.PreToolUse.push({
                     matcher: "Read|Write|Edit|MultiEdit|NotebookEdit|Grep|Glob|LS|Bash|Task|WebFetch|WebSearch|TodoWrite|ExitPlanMode",
                     hooks: [
                         {
                             type: "command",
-                            command: "cchelper play \"$TOOL_NAME\" start"
+                            command: startCommand
                         }
                     ]
                 });
@@ -102,7 +144,7 @@ export class HookInstaller {
                     hooks: [
                         {
                             type: "command", 
-                            command: "if [ -n \"$TOOL_ERROR\" ]; then cchelper play \"$TOOL_NAME\" error; else cchelper play \"$TOOL_NAME\" success; fi"
+                            command: this.generateCrossPlatformCommand("$TOOL_ERROR", "$TOOL_NAME")
                         }
                     ]
                 });
@@ -258,6 +300,30 @@ export class HookInstaller {
     }
 
     public async installSingleHook(hookType: string, hooksConfig: any): Promise<boolean> {
+        // 首先检查CLI是否可用
+        const cliStatus = await CLIChecker.getCLIStatus();
+        if (!cliStatus.available) {
+            const message = `无法安装 ${hookType} hook：cchelper CLI 未安装或不可用\n错误：${cliStatus.error}\n\n请先安装 CLI 工具后再尝试安装 hooks。`;
+            vscode.window.showErrorMessage(message, '安装 CLI').then(selection => {
+                if (selection === '安装 CLI') {
+                    vscode.commands.executeCommand('claude-code-helper.installCLI');
+                }
+            });
+            return false;
+        }
+
+        // 验证hooks需要的CLI命令
+        const commandValidation = await CLIChecker.validateHookCommands();
+        if (!commandValidation.valid) {
+            const message = `CLI工具缺少hooks所需的命令：${commandValidation.missingCommands.join(', ')}\n\n请重新安装或升级 CLI 工具。`;
+            vscode.window.showErrorMessage(message, '重新安装 CLI').then(selection => {
+                if (selection === '重新安装 CLI') {
+                    vscode.commands.executeCommand('claude-code-helper.installCLI');
+                }
+            });
+            return false;
+        }
+
         try {
             // 确保 .claude 目录存在
             const claudeDir = path.dirname(this.claudeSettingsPath);
@@ -305,13 +371,17 @@ export class HookInstaller {
                 });
                 installed = true;
             } else if (hookType === 'toolSounds' && hooksConfig.toolSounds) {
-                // 添加工具声音 Hooks
+                // 添加工具声音 Hooks  
+                const startCommand = this.isWindows() 
+                    ? 'cchelper play "%TOOL_NAME%" start'
+                    : 'cchelper play "$TOOL_NAME" start';
+                    
                 settings.hooks.PreToolUse.push({
                     matcher: "Read|Write|Edit|MultiEdit|NotebookEdit|Grep|Glob|LS|Bash|Task|WebFetch|WebSearch|TodoWrite|ExitPlanMode",
                     hooks: [
                         {
                             type: "command",
-                            command: "cchelper play \"$TOOL_NAME\" start"
+                            command: startCommand
                         }
                     ]
                 });
@@ -321,7 +391,7 @@ export class HookInstaller {
                     hooks: [
                         {
                             type: "command", 
-                            command: "if [ -n \"$TOOL_ERROR\" ]; then cchelper play \"$TOOL_NAME\" error; else cchelper play \"$TOOL_NAME\" success; fi"
+                            command: this.generateCrossPlatformCommand("$TOOL_ERROR", "$TOOL_NAME")
                         }
                     ]
                 });
@@ -461,5 +531,32 @@ export class HookInstaller {
                 );
             }
         });
+    }
+
+    public async checkCLIStatus(): Promise<{
+        available: boolean;
+        version?: string;
+        error?: string;
+        commandsValid: boolean;
+        missingCommands?: string[];
+    }> {
+        const cliStatus = await CLIChecker.getCLIStatus();
+        
+        if (!cliStatus.available) {
+            return {
+                available: false,
+                error: cliStatus.error,
+                commandsValid: false
+            };
+        }
+
+        const commandValidation = await CLIChecker.validateHookCommands();
+        
+        return {
+            available: true,
+            version: cliStatus.version,
+            commandsValid: commandValidation.valid,
+            missingCommands: commandValidation.missingCommands
+        };
     }
 }
