@@ -2,7 +2,7 @@
   "name": "claude-code-helper",
   "displayName": "Claude Code Helper",
   "description": "VSCode extension for Claude Code development with terminal management and command execution",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "icon": "icon.jpeg",
   "publisher": "daodao97",
   "repository": {

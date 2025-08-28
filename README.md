@@ -1,86 +1,212 @@
-# Claude Code Helper - VSCode 扩展
+# Claude Code Helper
 
-专为 Claude Code 开发优化的 VSCode 扩展，提供便捷的终端管理和命令执行功能。
+[![English](https://img.shields.io/badge/Language-English-blue.svg)](README.md) [![中文](https://img.shields.io/badge/Language-中文-red.svg)](README_ZH.md)
 
-## 功能特性
+[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/daodao97.claude-code-helper?style=for-the-badge&logo=visual-studio-code&logoColor=white&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper)
+[![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/daodao97.claude-code-helper?style=for-the-badge&color=4CAF50)](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper)
+[![Visual Studio Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/daodao97.claude-code-helper?style=for-the-badge&color=FFD700)](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper)
 
-- 🚀 **Claude CLI 快捷命令**: 内置 Claude Code 常用命令，一键执行
-- 🖥️ **智能终端管理**: 支持右侧分屏和底部面板两种终端显示模式
-- 🔧 **环境变量管理**: 自动应用环境变量到新终端，简化开发环境配置
-- 📝 **多行命令支持**: 支持多行命令输入和执行，提高工作效率
-- 📚 **命令历史记录**: 自动保存和回溯历史命令
-- 💾 **配置持久化**: 所有设置自动保存，重启后保持配置
+A VSCode extension optimized for Claude Code development, featuring audio feedback, Hook system, and command-line tools to enhance your Claude Code development experience.
 
-## 使用方法
+## 🚀 Installation
 
-### 打开扩展面板
-- 通过命令面板 (Ctrl+Shift+P / Cmd+Shift+P) 搜索 "Open Command Panel"
-- 选择 "Claude Code Helper: Open Command Panel"
+### Install from VSCode Marketplace (Recommended)
+1. Open VSCode
+2. Go to the Extension Marketplace: [Claude Code Helper](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper)
+3. Click the "Install" button
 
-### Claude 常用命令
-点击界面顶部的 Claude 命令按钮快速执行：
-- **claude** - 启动 Claude Code
-- **claude -c** - 继续对话
-- **claude -r** - 打开历史对话
-- **claude --skip** - 跳过权限检查
+### Install via Command Palette
+1. Press `Ctrl+Shift+P` (Mac: `Cmd+Shift+P`) to open the command palette
+2. Type `Extensions: Install Extensions`
+3. Search for "Claude Code Helper"
+4. Install the extension
 
-### 环境变量配置
-1. 勾选"环境变量"复选框
-2. 在文本区域中输入环境变量，每行一个：
-   ```
-   ANTHROPIC_BASE_URL=https://api.example.com
-   API_TIMEOUT_MS=600000
-   NODE_ENV=development
-   ```
-3. 环境变量会在每次创建新终端时自动应用
+## ✨ Core Features
 
-### 终端位置设置
-- **右侧**: 在编辑器右侧分屏显示终端，与当前文件并行
-- **底部**: 在底部面板显示终端（VSCode 传统方式）
+### 🎵 Smart Audio Feedback System
+- **Tool-specific sound effects**: Each Claude Code tool has its unique sound prompt
+- **Status audio feedback**: Different sound effects for start, success, and error states
+- **Custom audio**: Support for custom audio files to personalize your work environment
+- **Audio preview**: Real-time preview of selected sound effects
 
-### 命令执行
-- 在输入框中输入要执行的命令
-- 支持多行命令输入
-- 按 Ctrl+Enter 或点击"运行命令"按钮执行
-- 使用"历史"按钮查看和选择之前执行的命令
+### 🔧 Claude Code Hooks Integration
+- **One-click installation**: Automatically generate Claude Code Hooks configuration
+- **Tool monitoring**: Monitor file operations like `Edit`, `MultiEdit`, `Write`, etc.
+- **Smart file opening**: Automatically open files in VSCode after operations
+- **Audio notifications**: Play corresponding sound effects when operations succeed or fail
 
-## 技术特点
+### 💻 Powerful Command Line Tool (cchelper)
+After installing the extension, you automatically get the `cchelper` command-line tool:
 
-### 智能命令过滤
-- 自动识别和过滤环境变量设置
-- 防止将配置命令作为终端命令执行
-- 确保只有有效的执行命令被发送到终端
+```bash
+# Play notification sounds
+cchelper play Read success
+cchelper play Write error
 
-### 终端优化
-- 智能终端创建和管理
-- 避免终端冲突和重复创建
-- 支持命令执行延迟，兼容终端初始化脚本
+# Open files in VSCode
+cchelper open /path/to/file.js
+cchelper open /path/to/file.js 42  # Open and jump to line 42
 
-### 界面设计
-- 简洁现代的用户界面
-- VSCode 主题适配
-- 响应式布局，适应不同屏幕尺寸
+# Show file in file manager
+cchelper reveal /path/to/file.js
 
-## 系统要求
+# Show file information
+cchelper info /path/to/file.js
 
-- VSCode 1.74.0 或更高版本
-- Claude Code CLI (用于 Claude 相关命令)
+# Process Claude Code Hooks data
+echo '{"tool_name": "Read", "tool_input": {...}}' | cchelper hook
+```
 
-## 发布历史
+### 🎯 Smart Terminal Management
+- **Claude CLI shortcuts**: One-click execution of common Claude Code commands
+- **Smart terminal positioning**: Support for both right panel and bottom panel display modes
+- **Environment variable management**: Automatically apply environment variables to new terminals
+- **Multi-line command support**: Support for complex command input and execution
+- **Command history**: Automatically save command history for easy reuse
 
-### 0.0.1
+## 📖 Detailed Usage Guide
 
-- 初始版本发布
-- Claude CLI 快捷命令支持
-- 终端位置控制
-- 环境变量管理
-- 命令历史功能
-- 多行命令支持
+### Audio Configuration
+1. Open command palette: `Ctrl+Shift+P` / `Cmd+Shift+P`
+2. Search for "Claude Code Helper: Open Command Panel"
+3. In the "Audio Settings" area:
+   - Select audio files for different tools
+   - Use preview buttons to test sound effects
+   - Support for `.wav`, `.mp3`, `.ogg`, and other formats
 
-## 开发与调试
+### Hooks Configuration
+1. Click "Install Claude Code Hooks" in the extension panel
+2. Choose configuration file location (global or project):
+   - **Global configuration**: `~/.claude/settings.json`
+   - **Project configuration**: `.claude/settings.json`
+3. Automatically generate configuration including:
+   - Audio prompts before file operations
+   - Audio notifications and automatic file opening after operations
 
-按 F5 启动调试模式测试扩展功能。
+### CLI Tool Installation
+After extension installation, the `cchelper` command is automatically installed:
+- **macOS/Linux**: Attempts to install to `/usr/local/bin`, `/opt/homebrew/bin`
+- **Windows**: Installs to user directory with PATH configuration guidance
+- **Fallback mechanism**: If no system permissions, installs to user directory
+
+### Environment Variable Configuration
+Configure environment variables in the extension panel:
+```bash
+ANTHROPIC_BASE_URL=https://api.example.com
+API_TIMEOUT_MS=600000
+NODE_ENV=development
+```
+These variables are automatically applied when creating new terminals.
+
+## 🎼 Supported Audio Tool Mapping
+
+| Tool Type | Start Sound | Success Sound | Error Sound |
+|-----------|-------------|---------------|-------------|
+| Read | File Open | File Open | Error Alert |
+| Write | File Create | File Create | Build Error |
+| Edit/MultiEdit | File Modify | File Save | Build Error |
+| Bash | Command Execute | Command Complete | Command Error |
+| Glob/Grep | Search Start | Search Complete | Search Error |
+| WebFetch/WebSearch | Network Request | Network Success | Network Error |
+
+## 🛠️ Claude Code Hooks Configuration Example
+
+The extension automatically generates the following configuration to your `.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cchelper play \"$TOOL_NAME\" start"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -n \"$TOOL_ERROR\" ]; then cchelper play \"$TOOL_NAME\" error; else cchelper play \"$TOOL_NAME\" success; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## ⚡ Quick Start
+
+1. **Install Extension**: Install from [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper)
+2. **Open Panel**: `Ctrl+Shift+P` → "Claude Code Helper: Open Command Panel"
+3. **Configure Audio**: Select your preferred sound effect files
+4. **Install Hooks**: Click the "Install Claude Code Hooks" button
+5. **Test CLI**: Run `cchelper help` in terminal
+
+## 🔧 System Requirements
+
+- **VSCode**: 1.74.0 or higher
+- **Claude Code**: Latest version
+- **Node.js**: Required for CLI tool operation
+- **Operating System**: Windows 10+, macOS 10.14+, Linux (mainstream distributions)
+
+## 🎯 Advanced Usage
+
+### Custom Audio Files
+1. Prepare audio files (recommended < 2 seconds, formats: wav/mp3/ogg)
+2. Click the "Select File" button in the extension panel
+3. Assign audio to different tools and states
+
+### Project-specific Configuration
+Create `.claude/settings.json` in your project root to implement project-level Hooks configuration.
+
+### CLI Tool Integration
+Integrate `cchelper` into your development workflow:
+```bash
+# Git hooks integration
+echo 'cchelper play Git success' >> .git/hooks/post-commit
+
+# Build script integration  
+npm run build && cchelper play Build success || cchelper play Build error
+```
+
+## 📊 Version History
+
+### v0.1.2 (Latest)
+- 🐛 Fix CLI installation script generation error
+- ✨ Improve cross-platform compatibility
+- 📝 Complete documentation
+
+### v0.1.1
+- ✨ Added complete Claude Code Hooks system
+- 🎵 Audio feedback functionality
+- 💻 CLI tool auto-installation
+- 🔧 Tool-specific sound effect mapping
+
+### v0.1.0
+- 🎯 Basic terminal management functionality
+- ⚙️ Environment variable management
+- 📚 Command history recording
+
+## 🤝 Contributing & Support
+
+- **Issue Reports**: [GitHub Issues](https://github.com/daodao97/claude-code-helper/issues)
+- **Feature Requests**: Welcome to submit Feature Requests
+- **Code Contributions**: Fork the project and submit Pull Requests
+
+## 📄 License
+
+MIT License - See [LICENSE](LICENSE) file for details
 
 ---
 
-**专为 Claude Code 开发者设计，提升你的开发效率！**
+**🎉 Designed specifically for Claude Code developers to make your development process enjoyable!**
+
+[📥 Install Now](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper) | [⭐ Rate Us](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper&ssr=false#review-details) | [🐛 Report Issues](https://github.com/daodao97/claude-code-helper/issues)
