@@ -386,7 +386,9 @@ export class HookInstaller {
     }
 
     private removeSingleHookType(settings: ClaudeSettings, hookType: string): boolean {
-        if (!settings.hooks) return false;
+        if (!settings.hooks) {
+            return false;
+        }
 
         let removed = false;
 
@@ -447,7 +449,9 @@ export class HookInstaller {
     }
 
     private removeExistingHooks(settings: ClaudeSettings): void {
-        if (!settings.hooks) return;
+        if (!settings.hooks) {
+            return;
+        }
 
         // 移除所有包含 cchelper 的 hooks
         ['PreToolUse', 'PostToolUse'].forEach(eventType => {
