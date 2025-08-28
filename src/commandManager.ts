@@ -159,6 +159,19 @@ export class CommandManager implements vscode.Disposable {
         return this.context.globalState.get<string>('terminalPosition', 'right');
     }
 
+    // 声音设置保存和加载
+    public async saveSoundSettings(soundSettings: {[key: string]: string}): Promise<void> {
+        await this.context.globalState.update('soundSettings', soundSettings);
+    }
+
+    public async loadSoundSettings(): Promise<{[key: string]: string}> {
+        return this.context.globalState.get<{[key: string]: string}>('soundSettings', {
+            authNotification: 'xm3808',
+            completeNotification: 'xm3812'
+        });
+    }
+
+
     public async checkClaudeInstallation(): Promise<boolean> {
         return new Promise((resolve) => {
             cp.exec('claude --version', (error) => {

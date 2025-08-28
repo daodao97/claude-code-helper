@@ -2,7 +2,7 @@
   "name": "claude-code-helper",
   "displayName": "Claude Code Helper",
   "description": "VSCode extension for Claude Code development with terminal management and command execution",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "icon": "icon.jpeg",
   "publisher": "daodao97",
   "repository": {
@@ -26,11 +26,34 @@
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
+  "bin": {
+    "cchelper": "./out/cli.js"
+  },
   "contributes": {
     "commands": [
       {
         "command": "claude-code-helper.openCommandPanel",
         "title": "Open Command Panel",
+        "category": "Claude Code Helper"
+      },
+      {
+        "command": "claude-code-helper.openClaudeCode",
+        "title": "Open Claude Code",
+        "category": "Claude Code Helper"
+      },
+      {
+        "command": "claude-code-helper.installHooks",
+        "title": "Install Claude Code Hooks",
+        "category": "Claude Code Helper"
+      },
+      {
+        "command": "claude-code-helper.uninstallHooks",
+        "title": "Uninstall Claude Code Hooks",
+        "category": "Claude Code Helper"
+      },
+      {
+        "command": "claude-code-helper.checkHooksStatus",
+        "title": "Check Hooks Status",
         "category": "Claude Code Helper"
       }
     ],
@@ -56,6 +79,22 @@
       "commandPalette": [
         {
           "command": "claude-code-helper.openCommandPanel",
+          "when": "true"
+        },
+        {
+          "command": "claude-code-helper.openClaudeCode",
+          "when": "true"
+        },
+        {
+          "command": "claude-code-helper.installHooks",
+          "when": "true"
+        },
+        {
+          "command": "claude-code-helper.uninstallHooks",
+          "when": "true"
+        },
+        {
+          "command": "claude-code-helper.checkHooksStatus",
           "when": "true"
         }
       ]
