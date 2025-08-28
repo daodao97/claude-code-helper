@@ -171,12 +171,15 @@ async function installCLI(context: vscode.ExtensionContext): Promise<void> {
 			});
 			
 		} else {
-			// macOS/Linux: 尝试多个系统目录
+			// macOS/Linux: 创建shell包装脚本
 			const systemBinDirs = ['/usr/local/bin', '/opt/homebrew/bin', '/usr/bin'];
-			const shellScript = `#!/bin/bash\nnode "${cliPath}" "$@"`;
+			
+			// 创建shell包装脚本，调用node执行CLI
+			const shellScript = `#!/bin/bash
+node "${cliPath}" "$@"`;
 			const tempScriptPath = path.join(os.tmpdir(), 'cchelper');
 			
-			fs.writeFileSync(tempScriptPath, shellScript);
+			fs.writeFileSync(tempScriptPath, shellScript, 'utf8');
 			fs.chmodSync(tempScriptPath, '755');
 			
 			let installed = false;
