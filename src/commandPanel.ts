@@ -266,6 +266,12 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                         });
                     }
                     break;
+                case 'checkCLI':
+                    vscode.commands.executeCommand('claude-code-helper.checkCLI');
+                    break;
+                case 'installCLI':
+                    vscode.commands.executeCommand('claude-code-helper.installCLI');
+                    break;
             }
         });
     }
@@ -949,9 +955,17 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                         <h3 style="margin: 0; color: var(--vscode-foreground); font-size: 16px; font-weight: 600; letter-spacing: -0.2px;">
                             Hooks 管理
                         </h3>
-                        <button onclick="uploadAudioFiles()" style="background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-size: 13px; transition: all 0.2s ease;" title="上传音频文件到 assets/sounds 目录">
-                            📁 上传音频
-                        </button>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="checkCLIStatus()" style="background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-input-border); border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;" title="检查CLI工具状态">
+                                🔧 检查CLI
+                            </button>
+                            <button onclick="installCLI()" style="background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;" title="安装cchelper CLI工具到系统PATH">
+                                📥 安装CLI
+                            </button>
+                            <button onclick="uploadAudioFiles()" style="background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;" title="上传音频文件到 assets/sounds 目录">
+                                📁 上传音频
+                            </button>
+                        </div>
                     </div>
 
                     <div class="hooks-list" style="display: flex; flex-direction: column; gap: 16px;">
@@ -1178,6 +1192,18 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                 function uploadAudioFiles() {
                     vscode.postMessage({
                         type: 'uploadAudioFile'
+                    });
+                }
+
+                function checkCLIStatus() {
+                    vscode.postMessage({
+                        type: 'checkCLI'
+                    });
+                }
+
+                function installCLI() {
+                    vscode.postMessage({
+                        type: 'installCLI'
                     });
                 }
                 

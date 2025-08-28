@@ -1,6 +1,9 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import { CommandPanelProvider } from './commandPanel';
 import { CommandManager } from './commandManager';
 import { HookInstaller } from './hookInstaller';
@@ -85,6 +88,34 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showInformationMessage(`Claude Code Helper hooks 状态: ${statusText}\n配置文件: ${status.path}`);
 		}),
 
+		vscode.commands.registerCommand('claude-code-helper.installCLI', async () => {
+			try {
+				await installCLI(context);
+				vscode.window.showInformationMessage('✅ cchelper CLI 已成功安装到系统PATH');
+			} catch (error) {
+				vscode.window.showErrorMessage(`CLI安装失败: ${error}`);
+			}
+		}),
+
+		vscode.commands.registerCommand('claude-code-helper.checkCLI', async () => {
+			try {
+				const { exec } = require('child_process');
+				exec('cchelper help', (error: any) => {
+					if (error) {
+						vscode.window.showWarningMessage('cchelper CLI 未安装或不在PATH中\n点击"安装CLI"按钮进行安装', '安装CLI').then(selection => {
+							if (selection === '安装CLI') {
+								vscode.commands.executeCommand('claude-code-helper.installCLI');
+							}
+						});
+					} else {
+						vscode.window.showInformationMessage('✅ cchelper CLI 已正确安装');
+					}
+				});
+			} catch (error) {
+				vscode.window.showErrorMessage(`检查CLI状态失败: ${error}`);
+			}
+		}),
+
 		commandManager,
 		{
 			dispose: () => httpServer.stop()
@@ -97,6 +128,89 @@ export function activate(context: vscode.ExtensionContext) {
 	setTimeout(() => {
 		vscode.commands.executeCommand('claude-code-helper.openCommandPanel');
 	}, 1000); // 延迟1秒确保VSCode完全加载
+}
+
+async function installCLI(context: vscode.ExtensionContext): Promise<void> {
+	const { exec } = require('child_process');
+	const { promisify } = require('util');
+	const execAsync = promisify(exec);
+
+	// 获取编译后的CLI文件路径
+	const cliPath = path.join(context.extensionPath, 'out', 'cli.js');
+	
+	if (!fs.existsSync(cliPath)) {
+		throw new Error('CLI文件不存在，请重新安装扩展');
+	}
+
+	const platform = os.platform();
+	const homeDir = os.homedir();
+	
+	try {
+		if (platform === 'win32') {
+			// Windows: 创建batch文件
+			const binDir = path.join(homeDir, 'AppData', 'Local', 'cchelper');
+			const batFile = path.join(binDir, 'cchelper.bat');
+			
+			// 确保目录存在
+			if (!fs.existsSync(binDir)) {
+				fs.mkdirSync(binDir, { recursive: true });
+			}
+			
+			// 创建batch文件
+			const batContent = `@echo off\nnode "${cliPath}" %*`;
+			fs.writeFileSync(batFile, batContent);
+			
+			// 添加到PATH（需要用户重启终端）
+			vscode.window.showInformationMessage(
+				`CLI已安装到: ${batFile}\n请将 ${binDir} 添加到系统PATH环境变量中`,
+				'打开目录'
+			).then(selection => {
+				if (selection === '打开目录') {
+					exec(`explorer "${binDir}"`);
+				}
+			});
+			
+		} else {
+			// macOS/Linux: 创建符号链接到 /usr/local/bin
+			const binDir = '/usr/local/bin';
+			const symlinkPath = path.join(binDir, 'cchelper');
+			
+			// 创建一个shell脚本而不是直接链接到.js文件
+			const shellScript = `#!/bin/bash\nnode "${cliPath}" "$@"`;
+			const tempScriptPath = path.join(os.tmpdir(), 'cchelper');
+			
+			fs.writeFileSync(tempScriptPath, shellScript);
+			fs.chmodSync(tempScriptPath, '755');
+			
+			try {
+				// 尝试直接复制到 /usr/local/bin
+				await execAsync(`sudo cp "${tempScriptPath}" "${symlinkPath}"`);
+				await execAsync(`sudo chmod +x "${symlinkPath}"`);
+			} catch (error) {
+				// 如果没有sudo权限，安装到用户目录
+				const userBinDir = path.join(homeDir, '.local', 'bin');
+				if (!fs.existsSync(userBinDir)) {
+					fs.mkdirSync(userBinDir, { recursive: true });
+				}
+				
+				const userSymlinkPath = path.join(userBinDir, 'cchelper');
+				fs.copyFileSync(tempScriptPath, userSymlinkPath);
+				fs.chmodSync(userSymlinkPath, '755');
+				
+				vscode.window.showInformationMessage(
+					`CLI已安装到: ${userSymlinkPath}\n请确保 ${userBinDir} 在您的PATH中`
+				);
+			}
+			
+			// 清理临时文件
+			if (fs.existsSync(tempScriptPath)) {
+				fs.unlinkSync(tempScriptPath);
+			}
+		}
+		
+	} catch (error) {
+		throw new Error(`安装过程中出错: ${error}`);
+	}
 }
 
 // This method is called when your extension is deactivated
