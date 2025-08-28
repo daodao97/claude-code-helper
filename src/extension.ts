@@ -171,23 +171,50 @@ async function installCLI(context: vscode.ExtensionContext): Promise<void> {
 			});
 			
 		} else {
-			// macOS/Linux: 创建符号链接到 /usr/local/bin
-			const binDir = '/usr/local/bin';
-			const symlinkPath = path.join(binDir, 'cchelper');
-			
-			// 创建一个shell脚本而不是直接链接到.js文件
+			// macOS/Linux: 尝试多个系统目录
+			const systemBinDirs = ['/usr/local/bin', '/opt/homebrew/bin', '/usr/bin'];
 			const shellScript = `#!/bin/bash\nnode "${cliPath}" "$@"`;
 			const tempScriptPath = path.join(os.tmpdir(), 'cchelper');
 			
 			fs.writeFileSync(tempScriptPath, shellScript);
 			fs.chmodSync(tempScriptPath, '755');
 			
-			try {
-				// 尝试直接复制到 /usr/local/bin
-				await execAsync(`sudo cp "${tempScriptPath}" "${symlinkPath}"`);
-				await execAsync(`sudo chmod +x "${symlinkPath}"`);
-			} catch (error) {
-				// 如果没有sudo权限，安装到用户目录
+			let installed = false;
+			
+			// 尝试安装到系统目录
+			for (const binDir of systemBinDirs) {
+				if (!fs.existsSync(binDir)) {
+					continue;
+				}
+				
+				const symlinkPath = path.join(binDir, 'cchelper');
+				
+				try {
+					// 检查目录权限
+					await fs.promises.access(binDir, fs.constants.W_OK);
+					// 直接复制（有写权限）
+					fs.copyFileSync(tempScriptPath, symlinkPath);
+					fs.chmodSync(symlinkPath, '755');
+					vscode.window.showInformationMessage(`✅ CLI已安装到系统目录: ${symlinkPath}`);
+					installed = true;
+					break;
+				} catch (permError) {
+					// 尝试使用sudo
+					try {
+						await execAsync(`sudo cp "${tempScriptPath}" "${symlinkPath}"`);
+						await execAsync(`sudo chmod +x "${symlinkPath}"`);
+						vscode.window.showInformationMessage(`✅ CLI已安装到系统目录: ${symlinkPath}`);
+						installed = true;
+						break;
+					} catch (sudoError) {
+						// 继续尝试下一个目录
+						continue;
+					}
+				}
+			}
+			
+			// 如果所有系统目录都失败，安装到用户目录
+			if (!installed) {
 				const userBinDir = path.join(homeDir, '.local', 'bin');
 				if (!fs.existsSync(userBinDir)) {
 					fs.mkdirSync(userBinDir, { recursive: true });
@@ -198,8 +225,15 @@ async function installCLI(context: vscode.ExtensionContext): Promise<void> {
 				fs.chmodSync(userSymlinkPath, '755');
 				
 				vscode.window.showInformationMessage(
-					`CLI已安装到: ${userSymlinkPath}\n请确保 ${userBinDir} 在您的PATH中`
-				);
+					`CLI已安装到用户目录: ${userSymlinkPath}\n请确保 ${userBinDir} 在您的PATH中`,
+					'添加到PATH'
+				).then(selection => {
+					if (selection === '添加到PATH') {
+						vscode.window.showInformationMessage(
+							`请将以下行添加到您的 ~/.bashrc 或 ~/.zshrc 文件中：\nexport PATH="$PATH:${userBinDir}"`
+						);
+					}
+				});
 			}
 			
 			// 清理临时文件
