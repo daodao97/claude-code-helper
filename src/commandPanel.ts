@@ -125,6 +125,20 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                     const position = await this.commandManager.loadTerminalPosition();
                     webview.postMessage({ type: 'terminalPositionLoaded', position });
                     break;
+                case 'saveSkipPermissions':
+                    await this.commandManager.saveSkipPermissions(message.skipPermissions);
+                    break;
+                case 'loadSkipPermissions':
+                    const skipPermissions = await this.commandManager.loadSkipPermissions();
+                    webview.postMessage({ type: 'skipPermissionsLoaded', skipPermissions });
+                    break;
+                case 'saveToolSoundsStrategies':
+                    await this.commandManager.saveToolSoundsStrategies(message.strategies);
+                    break;
+                case 'loadToolSoundsStrategies':
+                    const strategies = await this.commandManager.loadToolSoundsStrategies();
+                    webview.postMessage({ type: 'toolSoundsStrategiesLoaded', strategies });
+                    break;
                 case 'checkClaudeInstallation':
                     const isClaudeInstalled = await this.commandManager.checkClaudeInstallation();
                     webview.postMessage({ type: 'claudeInstallationChecked', installed: isClaudeInstalled });
@@ -565,9 +579,9 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                     color: var(--vscode-button-foreground);
                     border: none;
                     border-radius: 4px;
-                    padding: 12px 24px;
+                    padding: 8px 16px;
                     cursor: pointer;
-                    font-size: 14px;
+                    font-size: 13px;
                     font-weight: bold;
                     transition: all 0.2s ease;
                 }
@@ -587,9 +601,9 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                     color: var(--vscode-button-secondaryForeground);
                     border: 1px solid var(--vscode-button-border);
                     border-radius: 4px;
-                    padding: 12px 24px;
+                    padding: 8px 16px;
                     cursor: pointer;
-                    font-size: 14px;
+                    font-size: 13px;
                     transition: all 0.2s ease;
                 }
                 
@@ -602,9 +616,9 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                     color: var(--vscode-button-secondaryForeground);
                     border: 1px solid var(--vscode-button-border);
                     border-radius: 4px;
-                    padding: 12px 16px;
+                    padding: 8px 12px;
                     cursor: pointer;
-                    font-size: 14px;
+                    font-size: 13px;
                     transition: all 0.2s ease;
                 }
                 
@@ -848,12 +862,20 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                 
                 <div class="claude-commands-section">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--vscode-input-border);">
-                        <h3 style="margin: 0; color: var(--vscode-foreground); font-size: 16px; font-weight: 600; letter-spacing: -0.2px;">
-                            常用命令
-                        </h3>
-                        <a href="https://aicoding.sh" target="_blank" style="color: var(--vscode-textLink-foreground); text-decoration: none; font-size: 13px; opacity: 0.8; transition: opacity 0.2s ease;">
-                            aicoding.sh
-                        </a>
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <h3 style="margin: 0; color: var(--vscode-foreground); font-size: 16px; font-weight: 600; letter-spacing: -0.2px;">
+                                常用命令
+                            </h3>
+                            <a href="https://aicoding.sh" target="_blank" style="color: var(--vscode-textLink-foreground); text-decoration: none; font-size: 13px; opacity: 0.8; transition: opacity 0.2s ease;">
+                                aicoding.sh
+                            </a>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--vscode-foreground); cursor: pointer;">
+                                <input type="checkbox" id="skipPermissions" onchange="toggleSkipPermissions()" style="margin: 0;">
+                                跳过权限检查
+                            </label>
+                        </div>
                     </div>
                     
                     <!-- Claude未安装提示 -->
@@ -873,7 +895,7 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                         </div>
                     </div>
                     
-                    <div class="commands-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="commands-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                         <div class="command-item" onclick="executeCommandDirectly('claude')" style="background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 6px; padding: 16px; cursor: pointer; transition: all 0.2s ease;">
                             <div style="font-family: var(--vscode-editor-font-family); color: var(--vscode-textPreformat-foreground); font-size: 14px; font-weight: 600; margin-bottom: 6px;">
                                 claude
@@ -898,22 +920,19 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                                 打开历史对话
                             </div>
                         </div>
-                        <div class="command-item" onclick="executeCommandDirectly('claude --dangerously-skip-permissions')" style="background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 6px; padding: 16px; cursor: pointer; transition: all 0.2s ease;">
-                            <div style="font-family: var(--vscode-editor-font-family); color: var(--vscode-textPreformat-foreground); font-size: 14px; font-weight: 600; margin-bottom: 6px;">
-                                claude --skip
-                            </div>
-                            <div style="color: var(--vscode-descriptionForeground); font-size: 12px;">
-                                跳过权限检查
-                            </div>
-                        </div>
                     </div>
                 </div>
                 
                 <div class="hooks-management-section">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--vscode-input-border);">
-                        <h3 style="margin: 0; color: var(--vscode-foreground); font-size: 16px; font-weight: 600; letter-spacing: -0.2px;">
-                            Hooks 管理
-                        </h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; padding-bottom: 16px; border-bottom: 1px solid var(--vscode-input-border);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button id="hooksToggle" class="collapse-button" onclick="toggleHooksCollapse()" style="background: none; border: none; color: var(--vscode-foreground); cursor: pointer; padding: 4px; font-size: 14px; display: flex; align-items: center; transition: transform 0.2s ease;">
+                                ▶
+                            </button>
+                            <h3 style="margin: 0; color: var(--vscode-foreground); font-size: 16px; font-weight: 600; letter-spacing: -0.2px;">
+                                Hooks 管理
+                            </h3>
+                        </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <div id="cliStatus" style="display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border);">
                                 <span id="cliStatusIcon" style="font-size: 12px;">⏳</span>
@@ -925,7 +944,7 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                         </div>
                     </div>
 
-                    <div class="hooks-list" style="display: flex; flex-direction: column; gap: 16px;">
+                    <div id="hooksContent" class="hooks-list" style="display: none; flex-direction: column; gap: 16px; margin-top: 24px;">
                         <div class="hook-item" style="background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 6px; padding: 20px;">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                 <div style="flex: 1; margin-right: 16px;">
@@ -954,16 +973,34 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                                     <div style="font-weight: 600; color: var(--vscode-foreground); font-size: 15px; margin-bottom: 8px;">
                                         工具声音提醒
                                     </div>
-                                    <div style="color: var(--vscode-descriptionForeground); font-size: 13px; line-height: 1.4; margin-bottom: 8px;">
+                                    <div style="color: var(--vscode-descriptionForeground); font-size: 13px; line-height: 1.4; margin-bottom: 12px;">
                                         为每个工具操作播放对应的提示音
                                     </div>
-                                    <div style="color: var(--vscode-descriptionForeground); font-size: 12px; margin-bottom: 8px; opacity: 0.8;">
-                                        PreToolUse & PostToolUse • 所有工具
+                                    
+                                    <!-- 策略选择 -->
+                                    <div style="margin-bottom: 8px;">
+                                        <div style="color: var(--vscode-foreground); font-size: 12px; font-weight: 500; margin-bottom: 8px;">
+                                            声音策略：
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--vscode-foreground);">
+                                                <input type="checkbox" id="toolSoundsPreUse" style="margin: 0;" checked onchange="saveToolSoundsStrategies()">
+                                                <span>PreToolUse - 工具执行前提醒</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--vscode-foreground);">
+                                                <input type="checkbox" id="toolSoundsPostUse" style="margin: 0;" checked onchange="saveToolSoundsStrategies()">
+                                                <span>PostToolUse - 工具执行后提醒</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--vscode-foreground);">
+                                                <input type="checkbox" id="toolSoundsError" style="margin: 0;" checked onchange="saveToolSoundsStrategies()">
+                                                <span>ToolError - 工具错误时提醒</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 12px;">
                                     <div id="toolSoundsStatus" style="width: 8px; height: 8px; border-radius: 50%; background: var(--vscode-inputValidation-errorBackground); transition: background-color 0.2s ease;"></div>
-                                    <button id="toolSoundsButton" onclick="toggleSingleHook('toolSounds')" style="background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-input-border); border-radius: 4px; padding: 8px 16px; cursor: pointer; font-size: 13px; min-width: 56px; transition: all 0.2s ease;">
+                                    <button id="toolSoundsButton" onclick="toggleToolSoundsHook()" style="background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-input-border); border-radius: 4px; padding: 8px 16px; cursor: pointer; font-size: 13px; min-width: 56px; transition: all 0.2s ease;">
                                         开启
                                     </button>
                                 </div>
@@ -1022,6 +1059,8 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                 let envVars = '';
                 let terminalPosition = 'right';
                 let envVarsCollapsed = true;
+                let hooksCollapsed = true;
+                let skipPermissions = false;
                 
                 // 绑定键盘事件
                 document.getElementById('commandInput').addEventListener('keydown', function(e) {
@@ -1044,8 +1083,19 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                         return;
                     }
                     
+                    // 如果勾选了跳过权限且命令是 claude 开头，则添加 --dangerously-skip-permissions 参数
+                    let finalCommand = command;
+                    if (skipPermissions && command.startsWith('claude') && !command.includes('--dangerously-skip-permissions')) {
+                        // 在 claude 后面添加参数，保持原有的其他参数
+                        if (command === 'claude') {
+                            finalCommand = 'claude --dangerously-skip-permissions';
+                        } else {
+                            finalCommand = command.replace(/^claude/, 'claude --dangerously-skip-permissions');
+                        }
+                    }
+                    
                     // 添加到历史记录
-                    addToHistory(command);
+                    addToHistory(finalCommand);
                     
                     
                     // 获取环境变量
@@ -1055,7 +1105,7 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                     
                     vscode.postMessage({
                         type: 'executeCommand',
-                        command: command,
+                        command: finalCommand,
                         envVars: envVarsToApply,
                         terminalPosition: terminalPosition
                     });
@@ -1063,6 +1113,32 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                     // 保存命令历史和环境变量
                     saveHistory();
                     saveEnvVars();
+                }
+                
+                function toggleHooksCollapse() {
+                    const content = document.getElementById('hooksContent');
+                    const toggleButton = document.getElementById('hooksToggle');
+                    const headerDiv = toggleButton.closest('.hooks-management-section').querySelector('div[style*="border-bottom"]');
+                    
+                    hooksCollapsed = !hooksCollapsed;
+                    
+                    if (hooksCollapsed) {
+                        content.style.display = 'none';
+                        toggleButton.style.transform = 'rotate(0deg)';
+                        toggleButton.textContent = '▶';
+                        if (headerDiv) {
+                            headerDiv.style.borderBottom = 'none';
+                            headerDiv.style.paddingBottom = '0';
+                        }
+                    } else {
+                        content.style.display = 'flex';
+                        toggleButton.style.transform = 'rotate(90deg)';
+                        toggleButton.textContent = '▼';
+                        if (headerDiv) {
+                            headerDiv.style.borderBottom = '1px solid var(--vscode-input-border)';
+                            headerDiv.style.paddingBottom = '16px';
+                        }
+                    }
                 }
                 
                 function toggleEnvVarsCollapse() {
@@ -1133,9 +1209,26 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                     });
                 }
                 
+                function toggleSkipPermissions() {
+                    const checkbox = document.getElementById('skipPermissions');
+                    skipPermissions = checkbox.checked;
+                    
+                    // 保存设置到扩展存储
+                    vscode.postMessage({
+                        type: 'saveSkipPermissions',
+                        skipPermissions: skipPermissions
+                    });
+                }
+                
                 function loadTerminalPosition() {
                     vscode.postMessage({
                         type: 'loadTerminalPosition'
+                    });
+                }
+                
+                function loadSkipPermissions() {
+                    vscode.postMessage({
+                        type: 'loadSkipPermissions'
                     });
                 }
                 
@@ -1143,6 +1236,29 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                 function loadAudioFiles() {
                     vscode.postMessage({
                         type: 'getAudioFiles'
+                    });
+                }
+                
+                function saveToolSoundsStrategies() {
+                    const preUse = document.getElementById('toolSoundsPreUse').checked;
+                    const postUse = document.getElementById('toolSoundsPostUse').checked;
+                    const error = document.getElementById('toolSoundsError').checked;
+                    
+                    const strategies = {
+                        preToolUse: preUse,
+                        postToolUse: postUse,
+                        toolError: error
+                    };
+                    
+                    vscode.postMessage({
+                        type: 'saveToolSoundsStrategies',
+                        strategies: strategies
+                    });
+                }
+                
+                function loadToolSoundsStrategies() {
+                    vscode.postMessage({
+                        type: 'loadToolSoundsStrategies'
                     });
                 }
                 
@@ -1389,8 +1505,19 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                 }
                 
                 function executeCommandDirectly(command) {
+                    // 如果勾选了跳过权限且命令是 claude 开头，则添加 --dangerously-skip-permissions 参数
+                    let finalCommand = command;
+                    if (skipPermissions && command.startsWith('claude') && !command.includes('--dangerously-skip-permissions')) {
+                        // 在 claude 后面添加参数，保持原有的其他参数
+                        if (command === 'claude') {
+                            finalCommand = 'claude --dangerously-skip-permissions';
+                        } else {
+                            finalCommand = command.replace(/^claude/, 'claude --dangerously-skip-permissions');
+                        }
+                    }
+                    
                     // 添加到历史记录
-                    addToHistory(command);
+                    addToHistory(finalCommand);
                     
                     
                     // 获取环境变量
@@ -1400,7 +1527,7 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                     
                     vscode.postMessage({
                         type: 'executeCommand',
-                        command: command,
+                        command: finalCommand,
                         envVars: envVarsToApply,
                         terminalPosition: terminalPosition
                     });
@@ -1480,6 +1607,52 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                     }
                     
                     updateHookDisplay(hookType);
+                }
+
+                function toggleToolSoundsHook() {
+                    hooksState.toolSounds = !hooksState.toolSounds;
+                    
+                    // 获取选中的策略
+                    const preUse = document.getElementById('toolSoundsPreUse').checked;
+                    const postUse = document.getElementById('toolSoundsPostUse').checked;
+                    const error = document.getElementById('toolSoundsError').checked;
+                    
+                    // 检查是否至少选择了一个策略
+                    if (hooksState.toolSounds && !preUse && !postUse && !error) {
+                        // 如果没有选择任何策略，恢复状态并提示
+                        hooksState.toolSounds = false;
+                        showStatus('请至少选择一个声音策略', 'error');
+                        return;
+                    }
+                    
+                    // 保存策略设置
+                    saveToolSoundsStrategies();
+                    
+                    if (hooksState.toolSounds) {
+                        // 根据选中的策略构建配置
+                        const toolSoundsConfig = {
+                            toolSounds: true,
+                            toolSoundsStrategies: {
+                                preToolUse: preUse,
+                                postToolUse: postUse,
+                                toolError: error
+                            }
+                        };
+                        
+                        vscode.postMessage({
+                            type: 'installSingleHook',
+                            hookType: 'toolSounds',
+                            hooks: toolSoundsConfig
+                        });
+                    } else {
+                        // 卸载工具声音提醒
+                        vscode.postMessage({
+                            type: 'uninstallSingleHook',
+                            hookType: 'toolSounds'
+                        });
+                    }
+                    
+                    updateHookDisplay('toolSounds');
                 }
 
                 function updateHookDisplay(hookType) {
@@ -1610,6 +1783,19 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                                 document.getElementById('terminalPosition').value = terminalPosition;
                             }
                             break;
+                        case 'skipPermissionsLoaded':
+                            if (message.skipPermissions !== undefined) {
+                                skipPermissions = message.skipPermissions;
+                                document.getElementById('skipPermissions').checked = skipPermissions;
+                            }
+                            break;
+                        case 'toolSoundsStrategiesLoaded':
+                            if (message.strategies) {
+                                document.getElementById('toolSoundsPreUse').checked = message.strategies.preToolUse;
+                                document.getElementById('toolSoundsPostUse').checked = message.strategies.postToolUse;
+                                document.getElementById('toolSoundsError').checked = message.strategies.toolError;
+                            }
+                            break;
                         case 'claudeInstallationChecked':
                             const claudeNotInstalledDiv = document.getElementById('claudeNotInstalled');
                             if (!message.installed) {
@@ -1734,6 +1920,8 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                 loadHistory();
                 loadEnvVars();
                 loadTerminalPosition();
+                loadSkipPermissions();
+                loadToolSoundsStrategies();
                 loadAudioFiles();
                 checkClaudeInstallation();
                 
@@ -1744,11 +1932,23 @@ export class CommandPanelProvider implements vscode.WebviewViewProvider {
                 getCLIStatus();
                 
                 // 初始化环境变量折叠状态（默认折叠）
-                const content = document.getElementById('envVarsContent');
-                const toggleButton = document.getElementById('envVarsToggle');
-                content.style.display = 'none';
-                toggleButton.style.transform = 'rotate(0deg)';
-                toggleButton.textContent = '▶';
+                const envContent = document.getElementById('envVarsContent');
+                const envToggleButton = document.getElementById('envVarsToggle');
+                envContent.style.display = 'none';
+                envToggleButton.style.transform = 'rotate(0deg)';
+                envToggleButton.textContent = '▶';
+                
+                // 初始化Hooks管理折叠状态（默认折叠）
+                const hooksContent = document.getElementById('hooksContent');
+                const hooksToggleButton = document.getElementById('hooksToggle');
+                const hooksHeaderDiv = hooksToggleButton.closest('.hooks-management-section').querySelector('div[style*="border-bottom"]');
+                hooksContent.style.display = 'none';
+                hooksToggleButton.style.transform = 'rotate(0deg)';
+                hooksToggleButton.textContent = '▶';
+                if (hooksHeaderDiv) {
+                    hooksHeaderDiv.style.borderBottom = 'none';
+                    hooksHeaderDiv.style.paddingBottom = '0';
+                }
                 
                 // 点击外部关闭历史下拉框
                 document.addEventListener('click', function(event) {

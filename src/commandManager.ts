@@ -158,6 +158,14 @@ export class CommandManager implements vscode.Disposable {
     public async loadTerminalPosition(): Promise<string> {
         return this.context.globalState.get<string>('terminalPosition', 'right');
     }
+    
+    public async saveSkipPermissions(skipPermissions: boolean): Promise<void> {
+        await this.context.globalState.update('skipPermissions', skipPermissions);
+    }
+    
+    public async loadSkipPermissions(): Promise<boolean> {
+        return this.context.globalState.get<boolean>('skipPermissions', false);
+    }
 
     // 声音设置保存和加载
     public async saveSoundSettings(soundSettings: {[key: string]: string}): Promise<void> {
@@ -168,6 +176,19 @@ export class CommandManager implements vscode.Disposable {
         return this.context.globalState.get<{[key: string]: string}>('soundSettings', {
             authNotification: 'xm3808',
             completeNotification: 'xm3812'
+        });
+    }
+
+    // 声音策略设置保存和加载
+    public async saveToolSoundsStrategies(strategies: {[key: string]: boolean}): Promise<void> {
+        await this.context.globalState.update('toolSoundsStrategies', strategies);
+    }
+
+    public async loadToolSoundsStrategies(): Promise<{[key: string]: boolean}> {
+        return this.context.globalState.get<{[key: string]: boolean}>('toolSoundsStrategies', {
+            preToolUse: true,
+            postToolUse: true,
+            toolError: true
         });
     }
 
@@ -310,11 +331,11 @@ export class CommandManager implements vscode.Disposable {
         // 简化的输出信息
         if (commands.length === 1) {
             // 单个命令直接执行
-            terminal.sendText(`cd "${cwd}" && ${commands[0]}`);
+            terminal.sendText(commands[0]);
         } else {
             // 多个命令，使用 && 连接一次性执行
             const combinedCommand = commands.join(' && ');
-            terminal.sendText(`cd "${cwd}" && ${combinedCommand}`);
+            terminal.sendText(combinedCommand);
         }
     }
 
@@ -410,10 +431,7 @@ export class CommandManager implements vscode.Disposable {
         const delay = existingTerminal ? 500 : 1000; // 现有终端0.5秒，新终端1秒
         
         setTimeout(() => {
-            // 显示执行的命令信息
-            
-            // 确保在正确的目录下执行命令
-            this.terminal!.sendText(`cd "${cwd}"`);
+            // 直接执行命令，不切换目录
             this.terminal!.sendText(command.command);
         }, delay);
     }

@@ -6,6 +6,10 @@
 [![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/daodao97.claude-code-helper?style=for-the-badge&color=4CAF50)](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper)
 [![Visual Studio Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/daodao97.claude-code-helper?style=for-the-badge&color=FFD700)](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper)
 
+[![Open VSX Version](https://img.shields.io/open-vsx/v/daodao97/claude-code-helper?style=for-the-badge&logo=eclipse-ide&logoColor=white&color=C865B9)](https://open-vsx.org/extension/daodao97/claude-code-helper)
+[![Open VSX Downloads](https://img.shields.io/open-vsx/dt/daodao97/claude-code-helper?style=for-the-badge&color=4CAF50)](https://open-vsx.org/extension/daodao97/claude-code-helper)
+[![Open VSX Rating](https://img.shields.io/open-vsx/rating/daodao97/claude-code-helper?style=for-the-badge&color=FFD700)](https://open-vsx.org/extension/daodao97/claude-code-helper)
+
 专为 Claude Code 开发优化的 VSCode 扩展，集成音频反馈、Hook 系统和命令行工具，全方位提升你的 Claude Code 开发体验。
 
 ## 🚀 安装
@@ -14,6 +18,12 @@
 1. 打开 VSCode
 2. 前往扩展市场：[Claude Code Helper](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper)
 3. 点击 "Install" 按钮
+
+### 通过 Open VSX 安装（备选方案）
+适用于 VSCodium、Gitpod 等支持 Open VSX 的编辑器：
+1. 前往 [Open VSX 注册表](https://open-vsx.org/extension/daodao97/claude-code-helper)
+2. 点击 "Install" 按钮或下载 `.vsix` 文件
+3. 或在您的编辑器扩展市场中搜索 "Claude Code Helper"
 
 ### 通过命令面板安装
 1. 按 `Ctrl+Shift+P`（Mac: `Cmd+Shift+P`）打开命令面板
@@ -209,4 +219,4 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 **🎉 专为 Claude Code 开发者设计，让你的开发过程充满乐趣！**
 
-[📥 立即安装](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper) | [⭐ 给个好评](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper&ssr=false#review-details) | [🐛 报告问题](https://github.com/daodao97/claude-code-helper/issues)
+[📥 从 VSCode 安装](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper) | [📥 从 Open VSX 安装](https://open-vsx.org/extension/daodao97/claude-code-helper) | [⭐ 给个好评](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper&ssr=false#review-details) | [🐛 报告问题](https://github.com/daodao97/claude-code-helper/issues)

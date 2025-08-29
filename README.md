@@ -6,6 +6,10 @@
 [![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/daodao97.claude-code-helper?style=for-the-badge&color=4CAF50)](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper)
 [![Visual Studio Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/daodao97.claude-code-helper?style=for-the-badge&color=FFD700)](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper)
 
+[![Open VSX Version](https://img.shields.io/open-vsx/v/daodao97/claude-code-helper?style=for-the-badge&logo=eclipse-ide&logoColor=white&color=C865B9)](https://open-vsx.org/extension/daodao97/claude-code-helper)
+[![Open VSX Downloads](https://img.shields.io/open-vsx/dt/daodao97/claude-code-helper?style=for-the-badge&color=4CAF50)](https://open-vsx.org/extension/daodao97/claude-code-helper)
+[![Open VSX Rating](https://img.shields.io/open-vsx/rating/daodao97/claude-code-helper?style=for-the-badge&color=FFD700)](https://open-vsx.org/extension/daodao97/claude-code-helper)
+
 A VSCode extension optimized for Claude Code development, featuring audio feedback, Hook system, and command-line tools to enhance your Claude Code development experience.
 
 ## 🚀 Installation
@@ -14,6 +18,12 @@ A VSCode extension optimized for Claude Code development, featuring audio feedba
 1. Open VSCode
 2. Go to the Extension Marketplace: [Claude Code Helper](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper)
 3. Click the "Install" button
+
+### Install from Open VSX (Alternative)
+For VSCodium, Gitpod, and other editors supporting Open VSX:
+1. Go to [Open VSX Registry](https://open-vsx.org/extension/daodao97/claude-code-helper)
+2. Click the "Install" button or download the `.vsix` file
+3. Or search for "Claude Code Helper" in your editor's extension marketplace
 
 ### Install via Command Palette
 1. Press `Ctrl+Shift+P` (Mac: `Cmd+Shift+P`) to open the command palette
@@ -209,4 +219,4 @@ MIT License - See [LICENSE](LICENSE) file for details
 
 **🎉 Designed specifically for Claude Code developers to make your development process enjoyable!**
 
-[📥 Install Now](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper) | [⭐ Rate Us](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper&ssr=false#review-details) | [🐛 Report Issues](https://github.com/daodao97/claude-code-helper/issues)
+[📥 Install from VSCode](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper) | [📥 Install from Open VSX](https://open-vsx.org/extension/daodao97/claude-code-helper) | [⭐ Rate Us](https://marketplace.visualstudio.com/items?itemName=daodao97.claude-code-helper&ssr=false#review-details) | [🐛 Report Issues](https://github.com/daodao97/claude-code-helper/issues)

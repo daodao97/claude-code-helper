@@ -16,6 +16,7 @@ interface ClaudeSettings {
     hooks?: {
         PreToolUse?: HookConfig[];
         PostToolUse?: HookConfig[];
+        ToolError?: HookConfig[];
         Stop?: HookConfig[];
         Notification?: HookConfig[];
         [key: string]: HookConfig[] | undefined;
@@ -371,30 +372,68 @@ export class HookInstaller {
                 });
                 installed = true;
             } else if (hookType === 'toolSounds' && hooksConfig.toolSounds) {
-                // 添加工具声音 Hooks  
-                const startCommand = this.isWindows() 
-                    ? 'cchelper play "%TOOL_NAME%" start'
-                    : 'cchelper play "$TOOL_NAME" start';
-                    
-                settings.hooks.PreToolUse.push({
-                    matcher: "Read|Write|Edit|MultiEdit|NotebookEdit|Grep|Glob|LS|Bash|Task|WebFetch|WebSearch|TodoWrite|ExitPlanMode",
-                    hooks: [
-                        {
-                            type: "command",
-                            command: startCommand
-                        }
-                    ]
-                });
+                // 根据策略配置添加工具声音 Hooks
+                const strategies = hooksConfig.toolSoundsStrategies || {
+                    preToolUse: true,
+                    postToolUse: true,
+                    toolError: true
+                };
                 
-                settings.hooks.PostToolUse.push({
-                    matcher: "Read|Write|Edit|MultiEdit|NotebookEdit|Grep|Glob|LS|Bash|Task|WebFetch|WebSearch|TodoWrite|ExitPlanMode",
-                    hooks: [
-                        {
-                            type: "command", 
-                            command: this.generateCrossPlatformCommand("$TOOL_ERROR", "$TOOL_NAME")
-                        }
-                    ]
-                });
+                // 工具匹配器
+                const toolMatcher = "Read|Write|Edit|MultiEdit|NotebookEdit|Grep|Glob|LS|Bash|Task|WebFetch|WebSearch|TodoWrite|ExitPlanMode";
+                
+                // PreToolUse Hook - 工具执行前提醒
+                if (strategies.preToolUse) {
+                    const startCommand = this.isWindows() 
+                        ? 'cchelper play "%TOOL_NAME%" start'
+                        : 'cchelper play "$TOOL_NAME" start';
+                        
+                    settings.hooks.PreToolUse.push({
+                        matcher: toolMatcher,
+                        hooks: [
+                            {
+                                type: "command",
+                                command: startCommand
+                            }
+                        ]
+                    });
+                }
+                
+                // PostToolUse Hook - 工具执行后提醒（成功/失败）
+                if (strategies.postToolUse) {
+                    settings.hooks.PostToolUse.push({
+                        matcher: toolMatcher,
+                        hooks: [
+                            {
+                                type: "command", 
+                                command: this.generateCrossPlatformCommand("$TOOL_ERROR", "$TOOL_NAME")
+                            }
+                        ]
+                    });
+                }
+                
+                // ToolError Hook - 工具错误时提醒
+                if (strategies.toolError) {
+                    // 确保 ToolError hooks 数组存在
+                    if (!settings.hooks.ToolError) {
+                        settings.hooks.ToolError = [];
+                    }
+                    
+                    const errorCommand = this.isWindows() 
+                        ? 'cchelper play "%TOOL_NAME%" error'
+                        : 'cchelper play "$TOOL_NAME" error';
+                    
+                    settings.hooks.ToolError.push({
+                        matcher: toolMatcher,
+                        hooks: [
+                            {
+                                type: "command",
+                                command: errorCommand
+                            }
+                        ]
+                    });
+                }
+                
                 installed = true;
             }
 
@@ -472,8 +511,8 @@ export class HookInstaller {
                 removed = settings.hooks.PreToolUse.length < originalLength;
             }
         } else if (hookType === 'toolSounds') {
-            // 移除工具声音相关的 PreToolUse 和 PostToolUse hooks
-            let removedPre = false, removedPost = false;
+            // 移除工具声音相关的 PreToolUse、PostToolUse 和 ToolError hooks
+            let removedPre = false, removedPost = false, removedError = false;
             
             if (settings.hooks.PreToolUse) {
                 const originalLength = settings.hooks.PreToolUse.length;
@@ -491,7 +530,15 @@ export class HookInstaller {
                 removedPost = settings.hooks.PostToolUse.length < originalLength;
             }
             
-            removed = removedPre || removedPost;
+            if (settings.hooks.ToolError) {
+                const originalLength = settings.hooks.ToolError.length;
+                settings.hooks.ToolError = settings.hooks.ToolError.filter(hook => 
+                    !(hook.matcher.includes('Read|Write|Edit') && hook.hooks.some(h => h.command.includes('cchelper play')))
+                );
+                removedError = settings.hooks.ToolError.length < originalLength;
+            }
+            
+            removed = removedPre || removedPost || removedError;
         }
 
         return removed;

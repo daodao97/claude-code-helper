@@ -16,6 +16,9 @@ export function activate(context: vscode.ExtensionContext) {
 	const commandPanelProvider = new CommandPanelProvider(context.extensionUri, commandManager);
 	const hookInstaller = new HookInstaller();
 	const httpServer = new HttpServer();
+	
+	// 存储当前活跃的面板实例
+	let currentPanel: vscode.WebviewPanel | undefined;
 
 	// 启动 HTTP 服务器
 	httpServer.start().then(() => {
@@ -29,7 +32,14 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const disposables = [
 		vscode.commands.registerCommand('claude-code-helper.openCommandPanel', () => {
-			const panel = vscode.window.createWebviewPanel(
+			// 如果面板已存在且可见，则激活它
+			if (currentPanel) {
+				currentPanel.reveal();
+				return;
+			}
+			
+			// 创建新面板
+			currentPanel = vscode.window.createWebviewPanel(
 				'commandPanel',
 				'Claude Code Helper',
 				vscode.ViewColumn.One,
@@ -38,7 +48,13 @@ export function activate(context: vscode.ExtensionContext) {
 					retainContextWhenHidden: true
 				}
 			);
-			commandPanelProvider.setupWebviewPanel(panel);
+			
+			// 当面板被关闭时清除引用
+			currentPanel.onDidDispose(() => {
+				currentPanel = undefined;
+			});
+			
+			commandPanelProvider.setupWebviewPanel(currentPanel);
 		}),
 
 		vscode.commands.registerCommand('claude-code-helper.openClaudeCode', async () => {
